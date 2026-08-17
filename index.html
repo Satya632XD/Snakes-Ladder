@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Snakes & Ladders Deluxe</title>
+<style>
+:root{
+  --bg:#07101a; --panel:#101b29; --panel2:#17263a; --text:#f8fbff; --muted:#a8b7c9;
+  --green:#63e66d; --red:#ff5967; --blue:#60a8ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% 20%,#17283b,#07101a 65%);color:var(--text);
+font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;touch-action:manipulation}
+body{display:grid;place-items:center}
+button{font:inherit}
+#app{width:min(100vw,960px);height:100dvh;display:flex;flex-direction:column;padding:10px;
+padding-top:calc(10px + env(safe-area-inset-top));padding-bottom:calc(10px + env(safe-area-inset-bottom));gap:9px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.title{font-size:clamp(21px,5.5vw,34px);font-weight:1000;letter-spacing:-1.2px}
+.subtitle{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase}
+.iconBtn{width:44px;height:44px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:#101c2b;color:#fff;font-size:21px;
+box-shadow:0 8px 22px rgba(0,0,0,.2)}
+#boardArea{flex:1;min-height:0;display:grid;place-items:center;position:relative}
+#boardFrame{position:relative;width:min(96vw,78vh,720px);max-height:100%;border-radius:20px;overflow:hidden;background:#111;
+box-shadow:0 24px 80px rgba(0,0,0,.45);border:3px solid rgba(255,255,255,.18)}
+#boardImg{display:block;width:100%;height:auto;max-height:100%;user-select:none}
+#pieces{position:absolute;inset:0;pointer-events:none}
+.piece{position:absolute;width:clamp(19px,4.3vw,32px);height:clamp(19px,4.3vw,32px);border-radius:50%;
+transform:translate(-50%,-50%);border:3px solid #fff;display:grid;place-items:center;font-size:11px;font-weight:1000;color:#0b1016;
+box-shadow:0 7px 14px rgba(0,0,0,.42);z-index:5;will-change:left,top}
+.p1{background:#ff5b61}.p2{background:#5ba9ff}
+.piece.glow{box-shadow:0 0 0 7px rgba(255,255,255,.17),0 10px 22px rgba(0,0,0,.5)}
+#topInfo{display:flex;gap:8px;align-items:center}
+.pill{background:rgba(8,16,27,.72);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}
+#controls{display:flex;align-items:stretch;gap:9px}
+#info{flex:1;min-width:0;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid rgba(255,255,255,.09);
+border-radius:17px;padding:9px 12px;box-shadow:0 10px 28px rgba(0,0,0,.2)}
+#turnLine{font-size:clamp(14px,4vw,18px);font-weight:1000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rollBtn{width:115px;border:0;border-radius:17px;background:var(--green);color:#071008;font-size:16px;font-weight:1000;box-shadow:0 10px 30px rgba(99,230,109,.17)}
+#rollBtn:disabled{opacity:.42}
+#rollBtn small{display:block;font-size:10px;font-weight:900;opacity:.65;margin-top:2px}
+#diceOverlay{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:rgba(2,7,13,.48);backdrop-filter:blur(5px);pointer-events:none}
+.diceStage{display:grid;place-items:center}
+#diceCube{width:92px;height:92px;position:relative;transform-style:preserve-3d;transition:transform .42s cubic-bezier(.12,.82,.17,1);
+animation:none}
+#diceCube.rolling{animation:spinDice .76s cubic-bezier(.2,.65,.3,1)}
+@keyframes spinDice{
+0%{transform:rotateX(0) rotateY(0) rotateZ(0)}
+20%{transform:rotateX(150deg) rotateY(100deg) rotateZ(35deg)}
+55%{transform:rotateX(310deg) rotateY(270deg) rotateZ(-60deg)}
+100%{transform:rotateX(500deg) rotateY(430deg) rotateZ(0)}
+}
+.face{position:absolute;inset:0;border-radius:18px;background:linear-gradient(145deg,#fff,#d9e2ea);border:3px solid #aebdcb;
+box-shadow:inset 0 0 0 3px rgba(0,0,0,.06);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+padding:10px;backface-visibility:hidden}
+.face span{width:13px;height:13px;background:#152131;border-radius:50%;align-self:center;justify-self:center;box-shadow:inset 0 1px 1px rgba(255,255,255,.2)}
+.front{transform:translateZ(46px)} .back{transform:rotateY(180deg) translateZ(46px)}
+.right{transform:rotateY(90deg) translateZ(46px)} .left{transform:rotateY(-90deg) translateZ(46px)}
+.top{transform:rotateX(90deg) translateZ(46px)} .bottom{transform:rotateX(-90deg) translateZ(46px)}
+.face .a{grid-area:1/1}.face .b{grid-area:1/3}.face .c{grid-area:2/2}.face .d{grid-area:3/1}.face .e{grid-area:3/3}
+.face .f{grid-area:2/1}.face .g{grid-area:2/3}
+.face[data-n="1"] span:not(.c), .face[data-n="2"] span:not(.a):not(.e),
+.face[data-n="3"] span:not(.a):not(.c):not(.e), .face[data-n="4"] span:not(.a):not(.b):not(.d):not(.e),
+.face[data-n="5"] span:not(.a):not(.b):not(.c):not(.d):not(.e),
+.face[data-n="6"] span:not(.a):not(.b):not(.d):not(.e):not(.f):not(.g){display:none}
+#diceResult{margin-top:10px;font-weight:1000;font-size:15px;opacity:.9;text-align:center}
+#settingsModal,#winModal{position:fixed;inset:0;z-index:40;display:none;place-items:center;padding:20px;background:rgba(2,7,13,.72);backdrop-filter:blur(8px)}
+.modal{width:min(500px,94vw);max-height:88dvh;overflow:auto;background:linear-gradient(180deg,#19283b,#0c1624);border:1px solid rgba(255,255,255,.1);
+border-radius:24px;padding:18px;box-shadow:0 28px 90px rgba(0,0,0,.5)}
+.modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.modalTitle{font-size:24px;font-weight:1000}
+.close{border:0;background:#102033;color:#fff;border-radius:12px;width:40px;height:40px;font-size:20px}
+.sectionTitle{margin:12px 0 8px;font-weight:950;font-size:13px;color:#d8e6f4}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modeBtn,.mapBtn{border:1px solid rgba(255,255,255,.1);background:#0e1928;color:#dce8f4;border-radius:15px;padding:10px;font-weight:950}
+.modeBtn.active{background:#ddffe1;color:#061008;border-color:#ddffe1}
+.maps{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mapCard{background:#0c1623;border:1px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;text-align:left;padding:0}
+.mapCard.active{outline:3px solid var(--green)}
+.mapThumb{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+.mapName{padding:9px;font-size:12px;font-weight:950}
+#winModal .modal{text-align:center}.winner{font-size:32px;font-weight:1000}.winSub{color:var(--muted);margin:7px 0 18px}
+.primary{width:100%;border:0;background:var(--green);color:#071008;border-radius:15px;padding:14px;font-size:17px;font-weight:1000}
+.smallNote{color:var(--muted);font-size:11px;text-align:center;margin-top:10px}
+@media(max-height:680px){
+  #app{gap:6px}
+  .title{font-size:20px}.subtitle{display:none}
+  #boardFrame{width:min(92vw,70vh,650px)}
+  .legend{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div>
+      <div class="title">🐍 Snakes & Ladders</div>
+      <div class="subtitle">Animated classic • offline</div>
+    </div>
+    <button id="settingsBtn" class="iconBtn" aria-label="Settings">⚙️</button>
+  </header>
+
+  <div id="topInfo">
+    <div class="pill">🎯 <span id="modeLabel">VS AI</span></div>
+    <div class="pill">📍 <span id="mapLabel">Map 1</span></div>
+    <div class="pill">🔢 <span id="posLabel">0 / 0</span></div>
+  </div>
+
+  <div id="boardArea">
+    <div id="boardFrame">
+      <img id="boardImg" src="map1.jpg" alt="Snakes and Ladders map">
+      <div id="pieces">
+        <div id="p1" class="piece p1">1</div>
+        <div id="p2" class="piece p2">2</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <div id="info">
+      <div id="turnLine">Player 1's turn</div>
+      <div id="status">Roll the dice!</div>
+    </div>
+    <button id="rollBtn"><span>🎲 ROLL</span><small>Tap to throw</small></button>
+  </div>
+</div>
+
+<div id="diceOverlay">
+  <div class="diceStage">
+    <div id="diceCube">
+      <div class="face front" data-n="1"><span class="c"></span></div>
+      <div class="face back" data-n="6"><span class="a"></span><span class="b"></span><span class="c"></span><span class="d"></span><span class="e"></span><span class="f"></span><span class="g"></span></div>
+      <div class="face right" data-n="3"><span class="a"></span><span class="c"></span><span class="e"></span></div>
+      <div class="face left" data-n="4"><span class="a"></span><span class="b"></span><span class="d"></span><span class="e"></span></div>
+      <div class="face top" data-n="2"><span class="a"></span><span class="e"></span></div>
+      <div class="face bottom" data-n="5"><span class="a"></span><span class="b"></span><span class="c"></span><span class="d"></span><span class="e"></span></div>
+    </div>
+    <div id="diceResult">Rolling...</div>
+  </div>
+</div>
+
+<div id="settingsModal">
+  <div class="modal">
+    <div class="modalHead"><div class="modalTitle">⚙️ Settings</div><button class="close" id="closeSettings">×</button></div>
+
+    <div class="sectionTitle">Game mode</div>
+    <div class="modes">
+      <button id="aiMode" class="modeBtn active">🤖 VS AI</button>
+      <button id="localMode" class="modeBtn">👥 Local Multiplayer</button>
+    </div>
+
+    <div class="sectionTitle">Choose your map</div>
+    <div class="maps">
+      <button class="mapCard active" data-map="1"><img class="mapThumb" src="map1.jpg"><div class="mapName">Map 1 • Classic Blue</div></button>
+      <button class="mapCard" data-map="2"><img class="mapThumb" src="map2.jpg"><div class="mapName">Map 2 • Cartoon</div></button>
+      <button class="mapCard" data-map="3"><img class="mapThumb" src="map3.jpg"><div class="mapName">Map 3 • Snake World</div></button>
+      <button class="mapCard" data-map="4"><img class="mapThumb" src="map4.jpg"><div class="mapName">Map 4 • Wooden Deluxe</div></button>
+    </div>
+    <div class="smallNote">All four supplied maps are preserved as selectable visual boards.</div>
+  </div>
+</div>
+
+<div id="winModal">
+  <div class="modal">
+    <div class="winner">🏆 <span id="winnerName">Player 1</span> wins!</div>
+    <div class="winSub">Made it to square 100 🎉</div>
+    <button class="primary" id="newGame">Play Again</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const boardFrame=$('boardFrame'), boardImg=$('boardImg'), p1=$('p1'), p2=$('p2');
+  const rollBtn=$('rollBtn'), status=$('status'), turnLine=$('turnLine'), posLabel=$('posLabel');
+  const modeLabel=$('modeLabel'), mapLabel=$('mapLabel');
+  const diceOverlay=$('diceOverlay'), diceCube=$('diceCube'), diceResult=$('diceResult');
+  const settingsModal=$('settingsModal'), winModal=$('winModal');
+  const modeButtons={ai:$('aiMode'),local:$('localMode')};
+  const pieceEls=[p1,p2];
+
+  let mode='ai', mapIndex=1, turn=0, locked=false, gameOver=false;
+  let players=[];
+  let lastDie=1;
+
+  // Common classic jump table. The supplied artwork is preserved as the visual map.
+  const jumps={
+    ladders:{4:14,9:31,21:42,28:84,36:44,51:67,72:91,80:99},
+    snakes:{17:7,47:26,54:34,62:19,64:60,87:24,93:73,95:75,98:79}
+  };
+
+  // Small per-map variations so each supplied board has a believable set of jump triggers.
+  const mapJumps={
+    1:jumps,
+    2:{ladders:{3:22,7:29,20:38,28:44,36:55,52:74,63:83,80:99},snakes:{17:5,25:11,39:19,56:45,62:20,73:51,89:70,95:75,98:79}},
+    3:{ladders:{5:16,15:25,18:38,32:49,44:67,63:78},snakes:{9:3,24:16,36:18,49:20,65:45,71:52,76:60,88:48,96:84}},
+    4:{ladders:{4:14,21:42,25:53,31:68,56:95,72:91,84:97},snakes:{12:2,27:9,35:18,48:16,66:47,78:51,93:72,98:79}}
+  };
+
+  const mapBounds={
+    1:{l:.015,r:.985,t:.006,b:.994},
+    2:{l:.045,r:.965,t:.045,b:.955},
+    3:{l:.005,r:.995,t:.005,b:.995},
+    4:{l:.025,r:.975,t:.018,b:.982}
+  };
+
+  function getMapData(){return mapJumps[mapIndex];}
+
+  function resetPlayers(){
+    players=[
+      {name:'Player 1',pos:0},
+      {name:mode==='ai'?'AI':'Player 2',pos:0}
+    ];
+    turn=0; locked=false; gameOver=false; rollBtn.disabled=false;
+    placePiece(0,0);placePiece(1,0);
+    turnLine.textContent=players[0].name+"'s turn";
+    status.textContent='Roll the dice!';
+    updateLabels();
+  }
+
+  function cellCenter(n){
+    const b=mapBounds[mapIndex];
+    if(n<=0) return {x:.50,y:.985};
+    const row=Math.floor((n-1)/10);
+    const off=(n-1)%10;
+    const col=(row%2===0)?off:9-off;
+    return {
+      x:b.l+(col+.5)*(b.r-b.l)/10,
+      y:b.b-(row+.5)*(b.b-b.t)/10
+    };
+  }
+
+  function placePiece(i,n){
+    const p=cellCenter(n);
+    pieceEls[i].style.left=(p.x*100)+'%';
+    pieceEls[i].style.top=(p.y*100)+'%';
+  }
+
+  function movePiece(i,from,to,duration=105){
+    return new Promise(resolve=>{
+      const piece=pieceEls[i];
+      piece.classList.add('glow');
+      const step=from<to?1:-1;
+      let current=from;
+      if(from===to){resolve();return}
+      const tick=()=>{
+        current+=step;
+        const p=cellCenter(current);
+        piece.style.transition=`left ${duration}ms linear, top ${duration}ms linear`;
+        piece.style.left=(p.x*100)+'%';
+        piece.style.top=(p.y*100)+'%';
+        if(current===to){
+          setTimeout(()=>{piece.classList.remove('glow');resolve()},duration+20);
+        }else setTimeout(tick,duration);
+      };
+      tick();
+    });
+  }
+
+  function moveAlongArc(i,from,to,isSnake){
+    return new Promise(resolve=>{
+      const a=cellCenter(from),b=cellCenter(to),piece=pieceEls[i];
+      const steps=38; let k=0;
+      piece.classList.add('glow');
+      const curve=isSnake?0.075:-0.025;
+      const dx=b.x-a.x,dy=b.y-a.y;
+      function tick(){
+        k++; const t=k/steps;
+        const eased=isSnake?(1-Math.pow(1-t,2)):(t*t*(3-2*t));
+        const bend=Math.sin(Math.PI*t)*curve;
+        let x=a.x+dx*eased + (-dy)*bend;
+        let y=a.y+dy*eased + dx*bend;
+        piece.style.transition='left 80ms linear,top 80ms linear';
+        piece.style.left=(x*100)+'%'; piece.style.top=(y*100)+'%';
+        if(k<steps) setTimeout(tick,22);
+        else { piece.classList.remove('glow'); resolve(); }
+      }
+      tick();
+    });
+  }
+
+  function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+  function showDieFace(n){
+    // Front face is 1. Rotate the whole cube to bring a chosen face forward.
+    const rotations={
+      1:'rotateX(0deg) rotateY(0deg)',
+      2:'rotateX(-90deg) rotateY(0deg)',
+      3:'rotateX(0deg) rotateY(-90deg)',
+      4:'rotateX(0deg) rotateY(90deg)',
+      5:'rotateX(90deg) rotateY(0deg)',
+      6:'rotateX(180deg) rotateY(0deg)'
+    };
+    diceCube.classList.remove('rolling');
+    diceCube.style.transform=rotations[n];
+  }
+
+  async function rollDice(){
+    diceOverlay.style.display='grid';
+    diceResult.textContent='Rolling...';
+    const final=Math.floor(Math.random()*6)+1;
+    diceCube.classList.add('rolling');
+    diceCube.style.transform='rotateX(720deg) rotateY(720deg) rotateZ(360deg)';
+    // Rapidly cycle the face number while physically spinning.
+    let temp=0;
+    const cycler=setInterval(()=>{
+      temp=(temp%6)+1;
+      diceResult.textContent=['One','Two','Three','Four','Five','Six'][temp-1];
+    },85);
+    await wait(760);
+    clearInterval(cycler);
+    showDieFace(final);
+    diceResult.textContent='Rolled '+final+'!';
+    await wait(520);
+    diceOverlay.style.display='none';
+    return final;
+  }
+
+  async function playTurn(){
+    if(locked||gameOver)return;
+    locked=true; rollBtn.disabled=true;
+    const current=players[turn];
+    turnLine.textContent=current.name+"'s roll";
+    const n=await rollDice();
+    status.textContent=current.name+' rolled '+n;
+    await wait(250);
+
+    if(current.pos===0 && n!==6){
+      status.textContent='A 6 is needed to enter the board.';
+    }else{
+      const start=current.pos;
+      const target=(start===0?n:start+n);
+      if(target>100){
+        status.textContent='Need an exact roll to reach 100.';
+      }else{
+        await movePiece(turn,start,target);
+        current.pos=target; updateLabels();
+        if(target===100){win(turn);return;}
+        const data=getMapData();
+        const ladder=data.ladders[target], snake=data.snakes[target];
+        if(ladder){
+          status.textContent='🪜 Ladder! Climbing from '+target+' to '+ladder+'...';
+          await wait(300);
+          await moveAlongArc(turn,target,ladder,false);
+          current.pos=ladder; updateLabels();
+          await wait(180);
+        }else if(snake){
+          status.textContent='🐍 Snake! Sliding from '+target+' down to '+snake+'...';
+          await wait(300);
+          await moveAlongArc(turn,target,snake,true);
+          current.pos=snake; updateLabels();
+          await wait(180);
+        }else{
+          status.textContent='Landed on '+target+'.';
+        }
+      }
+    }
+
+    if(n===6 && !gameOver){
+      turnLine.textContent=current.name+" gets another roll!";
+      status.textContent+=' 🎉';
+      locked=false;rollBtn.disabled=false;
+      if(mode==='ai'&&turn===1) setTimeout(playTurn,650);
+      return;
+    }
+    turn=(turn+1)%2;
+    locked=false;rollBtn.disabled=false;
+    updateTurn();
+    if(mode==='ai'&&turn===1)setTimeout(playTurn,700);
+  }
+
+  function updateTurn(){
+    if(gameOver)return;
+    turnLine.textContent=players[turn].name+"'s turn";
+    if(mode==='ai'&&turn===1)status.textContent='AI is thinking...';
+    else status.textContent='Roll the dice!';
+  }
+
+  function updateLabels(){
+    posLabel.textContent=players[0].pos+' / '+players[1].pos;
+  }
+
+  function win(i){
+    gameOver=true;locked=true;rollBtn.disabled=true;
+    $('winnerName').textContent=players[i].name;
+    winModal.style.display='grid';
+  }
+
+  function newGame(){
+    $('winnerName').textContent='';
+    winModal.style.display='none';
+    resetPlayers();
+    showDieFace(1);
+  }
+
+  function applyMode(newMode){
+    mode=newMode;
+    modeButtons.ai.classList.toggle('active',mode==='ai');
+    modeButtons.local.classList.toggle('active',mode==='local');
+    modeLabel.textContent=mode==='ai'?'VS AI':'LOCAL 2P';
+    newGame();
+  }
+
+  function applyMap(n){
+    mapIndex=n;
+    boardImg.src='map'+n+'.jpg';
+    mapLabel.textContent='Map '+n;
+    document.querySelectorAll('.mapCard').forEach(c=>c.classList.toggle('active',Number(c.dataset.map)===n));
+    newGame();
+  }
+
+  $('settingsBtn').addEventListener('click',()=>settingsModal.style.display='grid');
+  $('closeSettings').addEventListener('click',()=>settingsModal.style.display='none');
+  settingsModal.addEventListener('click',e=>{if(e.target===settingsModal)settingsModal.style.display='none'});
+  modeButtons.ai.addEventListener('click',()=>applyMode('ai'));
+  modeButtons.local.addEventListener('click',()=>applyMode('local'));
+  document.querySelectorAll('.mapCard').forEach(c=>c.addEventListener('click',()=>{
+    applyMap(Number(c.dataset.map));
+    settingsModal.style.display='none';
+  }));
+  rollBtn.addEventListener('click',()=>{if(!(mode==='ai'&&turn===1))playTurn()});
+  $('newGame').addEventListener('click',newGame);
+
+  boardImg.addEventListener('load',()=>{
+    // Re-apply positions after image dimensions are known.
+    placePiece(0,players[0]?.pos||0);placePiece(1,players[1]?.pos||0);
+  });
+
+  showDieFace(1);
+  resetPlayers();
+})();
+</script>
+</body>
+</html>
